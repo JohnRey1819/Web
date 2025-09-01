@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python-Powered File Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #drop-zone { transition: background-color 0.3s, border-color 0.3s; }
+        .drag-over { background-color: #e0f2fe !important; border-color: #3b82f6 !important; }
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%;
+            width: 40px; height: 40px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-lg mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">Python File Converter</h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">Convert files using a Python backend.</p>
+        </div>
+
+        <div id="drop-zone" class="border-3 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-center p-8 md:p-12 cursor-pointer bg-gray-50 dark:bg-gray-700/50">
+            <input type="file" id="file-input" class="hidden">
+            <div id="upload-prompt">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <p class="mt-4 text-lg text-gray-600 dark:text-gray-300"><span class="font-semibold text-blue-600 dark:text-blue-400">Click to upload</span> or drag and drop</p>
+                <p id="file-name" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></p>
+            </div>
+        </div>
+
+        <div id="options" class="mt-6 hidden">
+            <div class="mb-4">
+                <label for="to-format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Convert To:</label>
+                <select id="to-format" class="block w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"></select>
+            </div>
+            <button id="convert-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition duration-300 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="m11 17 5-5-5-5"/><path d="m18 17 5-5-5-5"/></svg>
+                Convert
+            </button>
+        </div>
+
+        <div id="status" class="mt-6 text-center"></div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name');
+        const optionsDiv = document.getElementById('options');
+        const toFormatSelect = document.getElementById('to-format');
+        const convertBtn = document.getElementById('convert-btn');
+        const statusDiv = document.getElementById('status');
+
+        let selectedFile = null;
+
+        const conversionMap = {
+            'image': ['pdf'],
+            'pdf': ['docx'],
+            'text': ['docx'],
+        };
+        const mimeTypeMap = {
+            'image/png': 'image', 'image/jpeg': 'image', 'image/webp': 'image', 'image/gif': 'image',
+            'application/pdf': 'pdf',
+            'text/plain': 'text',
+        };
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+        convertBtn.addEventListener('click', handleConversion);
+
+        function handleFile(file) {
+            if (!file) return;
+            selectedFile = file;
+            fileNameDisplay.textContent = file.name;
+            const fileType = mimeTypeMap[file.type];
+
+            if (fileType && conversionMap[fileType]) {
+                populateFormatOptions(conversionMap[fileType]);
+                optionsDiv.classList.remove('hidden');
+                statusDiv.innerHTML = '';
+            } else {
+                showError('Unsupported file type.');
+                optionsDiv.classList.add('hidden');
+                selectedFile = null;
+                fileNameDisplay.textContent = 'Please choose a supported file.';
+            }
+        }
+
+        async function handleConversion() {
+            if (!selectedFile) return showError('Please select a file first.');
+            
+            const toFormat = toFormatSelect.value;
+            const fromType = mimeTypeMap[selectedFile.type];
+            
+            showLoading('Sending to Python for conversion...');
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('fromType', fromType);
+            formData.append('toFormat', toFormat);
+
+            try {
+                // This relative URL '/convert' works both locally and on a web host.
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorResult = await response.json();
+                    throw new Error(errorResult.error || 'Conversion failed on the server.');
+                }
+                
+                const blob = await response.blob();
+                const newFileName = `${selectedFile.name.split('.')[0]}.${toFormat}`;
+                showDownloadLink(blob, newFileName);
+
+            } catch (error) {
+                console.error('Conversion Error:', error);
+                showError(`Conversion failed: ${error.message}`);
+            }
+        }
+
+        function populateFormatOptions(formats) {
+            toFormatSelect.innerHTML = '';
+            formats.forEach(format => {
+                const option = document.createElement('option');
+                option.value = format;
+                option.textContent = format.toUpperCase();
+                toFormatSelect.appendChild(option);
+            });
+        }
+        function showLoading(message) { statusDiv.innerHTML = `<div class="flex flex-col items-center justify-center p-4 bg-blue-50 dark:bg-gray-700 rounded-lg"><div class="loader"></div><p class="mt-3 text-blue-800 dark:text-blue-300">${message}</p></div>`; }
+        function showError(message) { statusDiv.innerHTML = `<div class="p-4 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg"><strong>Error:</strong> ${message}</div>`; }
+        function showDownloadLink(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            statusDiv.innerHTML = `<div class="p-4 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-lg text-center"><p class="font-semibold">Conversion successful!</p><a href="${url}" download="${fileName}" class="mt-3 inline-block bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition duration-300">Download ${fileName}</a></div>`;
+        }
+    </script>
+</body>
+</html>
