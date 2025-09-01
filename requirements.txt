@@ -1,0 +1,6 @@
+Flask
+Flask-Cors
+pypdf
+python-docx
+Pillow
+gunicorn
