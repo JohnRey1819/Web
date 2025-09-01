@@ -21,7 +21,7 @@ To use the powerful PDF-to-DOCX converter and run the complete application, foll
 
 Clone this repository to your machine using Git:
 ```bash
-git clone [https://github.com/YOUR-USERNAME/YOUR-REPOSITORY-NAME.git](https://github.com/YOUR-USERNAME/YOUR-REPOSITORY-NAME.git)
+git clone [https://johnrey1819.github.io/templates/](https://github.com/YOUR-USERNAME/YOUR-REPOSITORY-NAME.git)
 cd YOUR-REPOSITORY-NAME
 ```
 (Or use the "Download ZIP" option on GitHub).
