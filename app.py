@@ -1,66 +1,72 @@
-import io
-from flask import Flask, request, send_file, jsonify, render_template
+# app.py
+import os
+from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
-# Conversion libraries
-from pypdf import PdfReader
-from docx import Document
-from PIL import Image
+from pdf2docx import Converter
 
-# --- Setup ---
+# Initialize the Flask app
 app = Flask(__name__)
+
+# Enable Cross-Origin Resource Sharing (CORS) to allow browser requests
+# from your HTML file to this Python server.
 CORS(app)
 
-# --- Route to Serve the Frontend ---
-@app.route('/')
-def index():
-    """Serves the main HTML page."""
-    return render_template('index.html')
+# Create a directory to temporarily store uploaded files
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-# --- Main Conversion Logic ---
-@app.route('/convert', methods=['POST'])
-def convert_file():
-    """Handles the file upload and conversion."""
-    try:
-        file = request.files['file']
-        from_type = request.form['fromType']
-        to_format = request.form['toFormat']
-        base_filename = file.filename.rsplit('.', 1)[0]
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+@app.route('/convert-pdf-to-docx', methods=['POST'])
+def convert_pdf_to_docx():
+    """
+    API endpoint to handle PDF to DOCX conversion.
+    Receives a PDF file, converts it, and returns the DOCX file.
+    """
+    # 1. Check if a file was sent in the request
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part in the request"}), 400
+
+    file = request.files['file']
+
+    # 2. Check if the filename is valid
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+
+    if file and file.filename.lower().endswith('.pdf'):
+        # 3. Save the uploaded PDF file temporarily
+        pdf_filename = file.filename
+        pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_filename)
+        file.save(pdf_path)
+
+        # 4. Define the output DOCX path
+        docx_filename = os.path.splitext(pdf_filename)[0] + '.docx'
+        docx_path = os.path.join(app.config['UPLOAD_FOLDER'], docx_filename)
         
-        output_buffer = io.BytesIO()
+        try:
+            # 5. Perform the conversion using the pdf2docx library
+            cv = Converter(pdf_path)
+            cv.convert(docx_path, start=0, end=None)
+            cv.close()
 
-        # --- Routing to the correct conversion function ---
-        if from_type == 'pdf' and to_format == 'docx':
-            pdf_reader = PdfReader(file.stream)
-            doc = Document()
-            for page in pdf_reader.pages:
-                doc.add_paragraph(page.extract_text() or "") # Use empty string if text is None
-            doc.save(output_buffer)
-            mime_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            download_name = f"{base_filename}.docx"
+            # 6. Send the converted file back to the user for download
+            return send_file(docx_path, as_attachment=True)
 
-        elif from_type == 'image' and to_format == 'pdf':
-            img = Image.open(file.stream).convert("RGB")
-            img.save(output_buffer, format='PDF', resolution=100.0)
-            mime_type = 'application/pdf'
-            download_name = f"{base_filename}.pdf"
-
-        elif from_type == 'text' and to_format == 'docx':
-            text_content = file.read().decode('utf-8')
-            doc = Document()
-            doc.add_paragraph(text_content)
-            doc.save(output_buffer)
-            mime_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            download_name = f"{base_filename}.docx"
+        except Exception as e:
+            # Handle potential conversion errors
+            return jsonify({"error": f"Conversion failed: {str(e)}"}), 500
             
-        else:
-            return jsonify({"error": f"Conversion from {from_type} to {to_format} is not supported."}), 400
+        finally:
+            # 7. Clean up the temporary files from the server
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+            if os.path.exists(docx_path):
+                os.remove(docx_path)
 
-        output_buffer.seek(0)
-        return send_file(output_buffer, as_attachment=True, download_name=download_name, mimetype=mime_type)
+    else:
+        return jsonify({"error": "Invalid file type, please upload a PDF."}), 400
 
-    except Exception as e:
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
-
-# This part is for local testing; Gunicorn will run the app in production
 if __name__ == '__main__':
+    # Run the app on localhost, port 5000
     app.run(debug=True, port=5000)
