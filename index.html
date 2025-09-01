@@ -3,26 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python-Powered File Converter</title>
+    <title>Advanced Client-Side File Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     
+    <script>
+      // Required setup for pdf.js to specify where its worker file is located.
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+    </script>
+    
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        #drop-zone { transition: background-color 0.3s, border-color 0.3s; }
-        .drag-over { background-color: #e0f2fe !important; border-color: #3b82f6 !important; }
-        .loader {
-            border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%;
-            width: 40px; height: 40px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+         body { font-family: 'Inter', sans-serif; }
+         #drop-zone { transition: background-color 0.3s, border-color 0.3s; }
+         .drag-over { background-color: #e0f2fe !important; border-color: #3b82f6 !important; }
+         .loader {
+             border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%;
+             width: 40px; height: 40px; animation: spin 1s linear infinite;
+         }
+         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+         /* Style for the temporary HTML rendering frame */
+         #render-frame { position: absolute; left: -9999px; top: -9999px; width: 1024px; border: none; }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
     <div class="w-full max-w-lg mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
         <div class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">Python File Converter</h1>
-            <p class="text-gray-500 dark:text-gray-400 mt-2">Convert files using a Python backend.</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">Advanced File Converter</h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">Convert files securely in your browser & with a backend.</p>
         </div>
 
         <div id="drop-zone" class="border-3 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-center p-8 md:p-12 cursor-pointer bg-gray-50 dark:bg-gray-700/50">
@@ -39,6 +53,9 @@
                 <label for="to-format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Convert To:</label>
                 <select id="to-format" class="block w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"></select>
             </div>
+            <div id="docx-warning" class="hidden p-3 mb-4 text-xs text-yellow-800 bg-yellow-100 rounded-lg dark:bg-yellow-900/40 dark:text-yellow-300">
+                <strong>Note:</strong> This conversion uses a high-quality backend server. Ensure you are running it locally for it to work.
+            </div>
             <button id="convert-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition duration-300 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="m11 17 5-5-5-5"/><path d="m18 17 5-5-5-5"/></svg>
                 Convert
@@ -47,46 +64,73 @@
 
         <div id="status" class="mt-6 text-center"></div>
     </div>
+    
+    <iframe id="render-frame"></iframe>
 
     <script>
+        // --- DOM Element References ---
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const fileNameDisplay = document.getElementById('file-name');
         const optionsDiv = document.getElementById('options');
         const toFormatSelect = document.getElementById('to-format');
+        const docxWarning = document.getElementById('docx-warning');
         const convertBtn = document.getElementById('convert-btn');
         const statusDiv = document.getElementById('status');
+        const renderFrame = document.getElementById('render-frame');
 
+        // --- Global State ---
         let selectedFile = null;
 
+        // --- Conversion & MIME Type Maps ---
         const conversionMap = {
-            'image': ['pdf'],
-            'pdf': ['docx'],
-            'text': ['docx'],
+            'image': ['png', 'jpeg', 'webp', 'pdf'],
+            'pdf': ['jpeg', 'png', 'docx'],
+            'document': ['txt', 'pdf'],
+            'text': ['pdf', 'docx'],
+            'html': ['png', 'jpeg'],
+            'json': ['csv']
         };
         const mimeTypeMap = {
             'image/png': 'image', 'image/jpeg': 'image', 'image/webp': 'image', 'image/gif': 'image',
             'application/pdf': 'pdf',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'document',
             'text/plain': 'text',
+            'text/html': 'html',
+            'application/json': 'json'
         };
 
+        // --- Event Listeners ---
         dropZone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+        fileInput.addEventListener('change', handleFileSelect);
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
+            dropZone.addEventListener(e, preventDefaults, false);
+            document.body.addEventListener(e, preventDefaults, false);
+        });
+        ['dragenter', 'dragover'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.add('drag-over'), false));
+        ['dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('drag-over'), false));
+        dropZone.addEventListener('drop', handleDrop, false);
         convertBtn.addEventListener('click', handleConversion);
+        toFormatSelect.addEventListener('change', (e) => {
+            docxWarning.classList.toggle('hidden', e.target.value !== 'docx' || getFileType(selectedFile.type) !== 'pdf');
+        });
+
+        // --- Event Handlers ---
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        function handleDrop(e) { if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); }
+        function handleFileSelect(e) { if (e.target.files.length) handleFile(e.target.files[0]); }
 
         function handleFile(file) {
-            if (!file) return;
             selectedFile = file;
             fileNameDisplay.textContent = file.name;
-            const fileType = mimeTypeMap[file.type];
+            const fileType = getFileType(file.type);
 
             if (fileType && conversionMap[fileType]) {
                 populateFormatOptions(conversionMap[fileType]);
                 optionsDiv.classList.remove('hidden');
-                statusDiv.innerHTML = '';
+                statusDiv.innerHTML = ''; 
+                docxWarning.classList.add('hidden'); // Reset warning
+                toFormatSelect.dispatchEvent(new Event('change')); // Trigger change to show warning if needed
             } else {
                 showError('Unsupported file type.');
                 optionsDiv.classList.add('hidden');
@@ -94,35 +138,39 @@
                 fileNameDisplay.textContent = 'Please choose a supported file.';
             }
         }
-
+        
         async function handleConversion() {
             if (!selectedFile) return showError('Please select a file first.');
             
             const toFormat = toFormatSelect.value;
-            const fromType = mimeTypeMap[selectedFile.type];
+            const fromType = getFileType(selectedFile.type);
             
-            showLoading('Sending to Python for conversion...');
-
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('fromType', fromType);
-            formData.append('toFormat', toFormat);
+            showLoading('Converting...');
 
             try {
-                // This relative URL '/convert' works both locally and on a web host.
-                const response = await fetch('/convert', {
-                    method: 'POST',
-                    body: formData,
-                });
+                let resultBlob, resultFileName;
+                
+                // --- Conversion Logic Routing ---
+                switch (`${fromType}-to-${toFormat}`) {
+                    case 'image-to-pdf': [resultBlob, resultFileName] = await imageToPdf(selectedFile); break;
+                    case 'image-to-png': case 'image-to-jpeg': case 'image-to-webp': [resultBlob, resultFileName] = await convertImage(selectedFile, toFormat); break;
+                    
+                    case 'pdf-to-png': case 'pdf-to-jpeg': await pdfToImages(selectedFile, toFormat); return; // This func handles its own UI
+                    case 'pdf-to-docx': [resultBlob, resultFileName] = await pdfToDocx(selectedFile); break;
 
-                if (!response.ok) {
-                    const errorResult = await response.json();
-                    throw new Error(errorResult.error || 'Conversion failed on the server.');
+                    case 'document-to-txt': [resultBlob, resultFileName] = await docxToText(selectedFile); break;
+                    
+                    case 'text-to-pdf': [resultBlob, resultFileName] = await textToPdf(selectedFile); break;
+                    case 'text-to-docx': [resultBlob, resultFileName] = await textToDocx(selectedFile); break;
+
+                    case 'html-to-png': case 'html-to-jpeg': [resultBlob, resultFileName] = await htmlToImage(selectedFile, toFormat); break;
+
+                    case 'json-to-csv': [resultBlob, resultFileName] = await jsonToCsv(selectedFile); break;
+
+                    default: showError(`Conversion from ${fromType} to ${toFormat} is not supported.`); return;
                 }
                 
-                const blob = await response.blob();
-                const newFileName = `${selectedFile.name.split('.')[0]}.${toFormat}`;
-                showDownloadLink(blob, newFileName);
+                if (resultBlob && resultFileName) showDownloadLink(resultBlob, resultFileName);
 
             } catch (error) {
                 console.error('Conversion Error:', error);
@@ -130,6 +178,7 @@
             }
         }
 
+        // --- UI Update Functions ---
         function populateFormatOptions(formats) {
             toFormatSelect.innerHTML = '';
             formats.forEach(format => {
@@ -138,13 +187,169 @@
                 option.textContent = format.toUpperCase();
                 toFormatSelect.appendChild(option);
             });
+            toFormatSelect.dispatchEvent(new Event('change'));
         }
         function showLoading(message) { statusDiv.innerHTML = `<div class="flex flex-col items-center justify-center p-4 bg-blue-50 dark:bg-gray-700 rounded-lg"><div class="loader"></div><p class="mt-3 text-blue-800 dark:text-blue-300">${message}</p></div>`; }
         function showError(message) { statusDiv.innerHTML = `<div class="p-4 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg"><strong>Error:</strong> ${message}</div>`; }
-        function showDownloadLink(blob, fileName) {
-            const url = URL.createObjectURL(blob);
-            statusDiv.innerHTML = `<div class="p-4 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-lg text-center"><p class="font-semibold">Conversion successful!</p><a href="${url}" download="${fileName}" class="mt-3 inline-block bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition duration-300">Download ${fileName}</a></div>`;
+        function showDownloadLink(blob, fileName, message = 'Conversion successful!') {
+            const url = blob ? URL.createObjectURL(blob) : '#';
+            statusDiv.innerHTML = `<div class="p-4 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-lg text-center"><p class="font-semibold">${message}</p>${blob ? `<a href="${url}" download="${fileName}" class="mt-3 inline-block bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition duration-300">Download ${fileName}</a>` : ''}</div>`;
         }
+        
+        // --- Utility Functions ---
+        function getFileType(mimeType) { return mimeTypeMap[mimeType] || null; }
+        function getFileNameWithoutExtension(fileName) { return fileName.substring(0, fileName.lastIndexOf('.')); }
+
+        // --- Core Conversion Functions ---
+        // IMAGE CONVERSIONS
+        const convertImage = (file, toFormat) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width; canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    if (toFormat === 'jpeg') { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+                    ctx.drawImage(img, 0, 0);
+                    canvas.toBlob(blob => {
+                        if (!blob) return reject(new Error('Canvas to Blob conversion failed'));
+                        resolve([blob, `${getFileNameWithoutExtension(file.name)}.${toFormat}`]);
+                    }, `image/${toFormat}`, 0.9);
+                };
+                img.onerror = () => reject(new Error('Failed to load image.'));
+                img.src = e.target.result;
+            };
+            reader.onerror = () => reject(new Error('Failed to read file.'));
+            reader.readAsDataURL(file);
+        });
+        const imageToPdf = async (file) => {
+            const { PDFDocument } = PDFLib;
+            const pdfDoc = await PDFDocument.create();
+            const page = pdfDoc.addPage();
+            const fileBytes = await file.arrayBuffer();
+            const image = file.type === 'image/png' ? await pdfDoc.embedPng(fileBytes) : await pdfDoc.embedJpg(fileBytes);
+            const { width, height } = image.scale(1);
+            page.setSize(width, height);
+            page.drawImage(image, { x: 0, y: 0, width, height });
+            const pdfBytes = await pdfDoc.save();
+            return [new Blob([pdfBytes], { type: 'application/pdf' }), `${getFileNameWithoutExtension(file.name)}.pdf`];
+        };
+
+        // PDF CONVERSIONS
+        const pdfToImages = (file, toFormat) => new Promise((resolve, reject) => {
+            const fileReader = new FileReader();
+            fileReader.onload = async function() {
+                try {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    if (pdf.numPages === 0) return reject(new Error("The selected PDF has no pages."));
+                    showLoading(`Converting ${pdf.numPages} page(s)...`);
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const viewport = page.getViewport({ scale: 2.0 });
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height; canvas.width = viewport.width;
+                        await page.render({ canvasContext: context, viewport: viewport }).promise;
+                        const blob = await new Promise(res => canvas.toBlob(res, `image/${toFormat}`));
+                        const link = document.createElement('a');
+                        link.download = `${getFileNameWithoutExtension(file.name)}_page_${i}.${toFormat}`;
+                        link.href = URL.createObjectURL(blob);
+                        link.click();
+                        URL.revokeObjectURL(link.href);
+                    }
+                    showDownloadLink(null, '', `Finished converting ${pdf.numPages} page(s).`);
+                    resolve();
+                } catch (err) { reject(err); }
+            };
+            fileReader.readAsArrayBuffer(file);
+        });
+
+        const pdfToDocx = async (file) => {
+            // This function sends the file to a Python backend for high-quality conversion.
+            // Make sure the Python server (app.py) is running for this to work.
+            showLoading("Uploading and converting on server...");
+            
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // Call the local Python Flask server, which runs on port 5000 by default.
+                const response = await fetch('http://127.0.0.1:5000/convert-pdf-to-docx', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    // Try to get a specific error message from the server response
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Server error: ${response.statusText}`);
+                }
+                
+                // The server responds with the converted file blob
+                const blob = await response.blob();
+                return [blob, `${getFileNameWithoutExtension(file.name)}.docx`];
+
+            } catch (error) {
+                console.error('Network or Server Error:', error);
+                // Re-throw the error to be caught by the main handler, providing a helpful message.
+                throw new Error(`Could not connect to the conversion server. Is it running? Details: ${error.message}`);
+            }
+        };
+
+        // DOCX/TEXT CONVERSIONS
+        const docxToText = async (file) => {
+            const arrayBuffer = await file.arrayBuffer();
+            const { value } = await mammoth.extractRawText({ arrayBuffer });
+            return [new Blob([value], { type: 'text/plain' }), `${getFileNameWithoutExtension(file.name)}.txt`];
+        };
+        const textToDocx = async (file) => {
+            const { Document, Packer, Paragraph } = docx;
+            const text = await file.text();
+            const doc = new Document({ sections: [{ children: [new Paragraph(text)] }] });
+            const blob = await Packer.toBlob(doc);
+            return [blob, `${getFileNameWithoutExtension(file.name)}.docx`];
+        };
+        const textToPdf = async (file) => {
+            const { PDFDocument, rgb, StandardFonts } = PDFLib;
+            const text = await file.text();
+            const pdfDoc = await PDFDocument.create();
+            const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+            const page = pdfDoc.addPage();
+            const { width, height } = page.getSize();
+            page.drawText(text, { x: 50, y: height - 60, font, size: 12, lineHeight: 15, color: rgb(0, 0, 0), maxWidth: width - 100 });
+            const pdfBytes = await pdfDoc.save();
+            return [new Blob([pdfBytes], { type: 'application/pdf' }), `${getFileNameWithoutExtension(file.name)}.pdf`];
+        };
+
+        // HTML & JSON CONVERSIONS
+        const htmlToImage = (file, toFormat) => new Promise(async (resolve, reject) => {
+            showLoading("Rendering HTML...");
+            const htmlContent = await file.text();
+            renderFrame.srcdoc = htmlContent;
+            renderFrame.onload = () => {
+                setTimeout(async () => { // Timeout to ensure all resources (images, css) are loaded
+                    try {
+                        const canvas = await html2canvas(renderFrame.contentWindow.document.body, { useCORS: true });
+                        const blob = await new Promise(res => canvas.toBlob(res, `image/${toFormat}`));
+                        resolve([blob, `${getFileNameWithoutExtension(file.name)}.${toFormat}`]);
+                    } catch(err) { reject(err); }
+                }, 1000); 
+            };
+        });
+        const jsonToCsv = async (file) => {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            if (!Array.isArray(data) || data.length === 0) throw new Error("JSON must be a non-empty array of objects.");
+            
+            const headers = Object.keys(data[0]);
+            let csv = headers.join(',') + '\n';
+            data.forEach(row => {
+                csv += headers.map(header => JSON.stringify(row[header] || '')).join(',') + '\n';
+            });
+            return [new Blob([csv], { type: 'text/csv' }), `${getFileNameWithoutExtension(file.name)}.csv`];
+        };
     </script>
 </body>
 </html>
