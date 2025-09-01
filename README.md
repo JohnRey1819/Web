@@ -7,7 +7,7 @@ This is a web-based file converter with a powerful two-part design.
 
 ## Live Demo
 
-**[👉 Click here to try the live demo 👈](https://YOUR-USERNAME.github.io/YOUR-REPOSITORY-NAME/)**
+**[👉 Click here to try the live demo 👈](https://johnrey1819.github.io/templates/)**
 
 *(Note: In the live demo, only the JavaScript-based conversions will work. PDF to DOCX requires the local setup below.)*
 
