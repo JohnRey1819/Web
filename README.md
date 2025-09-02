@@ -1,75 +1,78 @@
 # Advanced File Converter 🚀
 
-This is a web-based file converter with a powerful two-part design.
+This is a full-stack file converter application designed for live web hosting. It consists of:
 
-* **⚡️ Live Demo (Client-Side):** The main interface runs directly in your browser. It uses JavaScript for fast and private conversions like Image-to-PDF, PDF-to-Image, and text manipulation. You can try it out right now!
-* **🧠 Full Power (Server-Side):** For high-quality PDF to Word (DOCX) conversion that preserves layout, tables, and images, this project uses a Python backend. To unlock this feature, you need to run the backend on your computer.
+1.  **Frontend:** A static HTML, CSS, and JavaScript site that handles most conversions directly in the browser.
+2.  **Backend:** A Python Flask API for high-quality PDF to Word (DOCX) conversions, designed to be hosted as a web service.
 
-## Live Demo
+This guide details how to deploy the entire application for free using GitHub and Render.
 
-**[👉 Click here to try the live demo 👈](https://johnrey1819.github.io/templates/)**
-
-*(Note: In the live demo, only the JavaScript-based conversions will work. PDF to DOCX requires the local setup below.)*
-
----
-
-## Get Full Functionality: Local Setup Guide
-
-To use the powerful PDF-to-DOCX converter and run the complete application, follow these steps on your own computer.
-
-### 1. Get the Code
-
-Clone this repository to your machine using Git:
-```bash
-git clone [https://johnrey1819.github.io/templates/](https://github.com/YOUR-USERNAME/YOUR-REPOSITORY-NAME.git)
-cd YOUR-REPOSITORY-NAME
-```
-(Or use the "Download ZIP" option on GitHub).
-
-### 2. Set Up the Python Backend
-
-You'll need your terminal or command prompt for these steps.
-
-**a. Create and Activate a Virtual Environment**
-
-This creates a safe sandbox for the Python tools.
-```bash
-# On macOS or Linux
-python3 -m venv venv
-source venv/bin/activate
-
-# On Windows
-python -m venv venv
-.\venv\Scripts\activate
-```
-*(You will see `(venv)` next to your command prompt if it worked.)*
-
-**b. Install the Required Tools**
-
-This project uses a few Python libraries. Install them easily with this command:
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Run the Full Application
-
-**a. Start the Python Server**
-
-In your terminal (with `(venv)` active), start the server:
-```bash
-python app.py
-```
-Keep this terminal window open! It's now running the "brain" of the converter.
-
-**b. Open the Website**
-
-Go to the project folder on your computer and double-click the `index.html` file.
-
-**✅ Success!** The website is now open, and because the Python server is running in the background, **all features, including PDF to DOCX, will work perfectly.**
+### **Prerequisites**
+* A **[GitHub](https://github.com/)** account.
+* A **[Render](https://render.com/)** account (you can sign up for free using your GitHub account).
 
 ---
 
-## Troubleshooting
+## Deployment Instructions
 
-* **PDF to DOCX Fails:** If you get a "Could not connect" error, it's because the Python server (`app.py`) is not running. Make sure the terminal from Step 3a is still open and running the script.
-* **Command Not Found (`python` or `pip`):** You may need to [install Python](https://www.python.org/downloads/) or use `python3` and `pip3` on macOS/Linux.
+We will deploy this project in two parts on Render: the Python **Web Service** (backend) and the **Static Site** (frontend).
+
+### Step 1: Get the Code on GitHub
+
+1.  **Create Files:** Create the four files (`index.html`, `app.py`, `requirements.txt`, `README.md`) in a folder on your computer.
+2.  **Create Repository:** Go to GitHub and create a new, empty repository.
+3.  **Upload Files:** Upload the four files to your new GitHub repository.
+
+### Step 2: Deploy the Python Backend on Render
+
+This will create the live server that performs the PDF to DOCX conversion.
+
+1.  Log in to your **Render Dashboard**.
+2.  Click **New +** and select **Web Service**.
+3.  Connect the GitHub repository you just created.
+4.  Fill in the service details:
+    * **Name:** `file-converter-backend` (or any unique name).
+    * **Region:** Choose a region near you (e.g., Singapore).
+    * **Branch:** `main` (or your default branch).
+    * **Runtime:** `Python 3`.
+    * **Build Command:** `pip install -r requirements.txt`.
+    * **Start Command:** `gunicorn app:app`.
+    * **Instance Type:** Select `Free`.
+5.  Click **Create Web Service**.
+6.  Render will start building and deploying your backend. This may take a few minutes.
+7.  Once it's live, **copy the URL** for your service. It will look something like `https://file-converter-backend.onrender.com`.
+
+### Step 3: Connect the Frontend to Your Live Backend
+
+Now we tell the website where to find its Python "brain".
+
+1.  Go back to your code on your computer (or edit directly on GitHub).
+2.  Open the `index.html` file.
+3.  Find this line in the JavaScript section:
+    ```javascript
+    const backendUrl = '[https://your-backend-service-name.onrender.com/convert-pdf-to-docx](https://your-backend-service-name.onrender.com/convert-pdf-to-docx)';
+    ```
+4.  **Replace the placeholder URL** with the backend URL you copied from Render in the previous step. Make sure to keep the `/convert-pdf-to-docx` at the end.
+5.  Save the changes to `index.html` and push them to your GitHub repository.
+
+### Step 4: Deploy the Frontend on Render
+
+This will publish your user-facing website.
+
+1.  Go back to your **Render Dashboard**.
+2.  Click **New +** and select **Static Site**.
+3.  Select the **same GitHub repository** as before.
+4.  Fill in the service details:
+    * **Name:** `file-converter-frontend` (or any name you like).
+    * **Branch:** `main`.
+5.  The build settings can be left as default. Click **Create Static Site**.
+6.  Render will deploy your `index.html` file. This is usually very fast.
+
+### Step 5: You're Live!
+
+Your static site will now have its own public URL (e.g., `https://file-converter-frontend.onrender.com`).
+
+* **This is the main URL you share with people.**
+* When a user visits this site and converts a PDF to DOCX, your frontend will correctly send the file to your live backend service for processing.
+
+The entire application is now fully deployed and functional on the web.
