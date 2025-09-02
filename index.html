@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced File Converter</title>
+    <title>Coupal File Converter | ACT 2A Project</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -15,38 +15,55 @@
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
     </script>
     <style>
-         body { font-family: 'Inter', sans-serif; }
-         #drop-zone { transition: background-color 0.3s, border-color 0.3s; }
-         .drag-over { background-color: #e0f2fe !important; border-color: #3b82f6 !important; }
-         .loader {
-             border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%;
-             width: 40px; height: 40px; animation: spin 1s linear infinite;
-         }
-         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-         #render-frame { position: absolute; left: -9999px; top: -9999px; width: 1024px; border: none; }
+        body { font-family: 'Inter', sans-serif; }
+        #drop-zone { transition: background-color 0.3s, border-color 0.3s; }
+        .drag-over { background-color: #e0f2fe !important; border-color: #3b82f6 !important; }
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%;
+            width: 40px; height: 40px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #render-frame { position: absolute; left: -9999px; top: -9999px; width: 1024px; border: none; }
+        #preview-container img, #preview-container canvas { max-height: 150px; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        .slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; background: #3b82f6; cursor: pointer; border-radius: 50%; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; background: #3b82f6; cursor: pointer; border-radius: 50%; }
+        input[type=range]::-moz-range-thumb { width: 20px; height: 20px; background: #3b82f6; cursor: pointer; border-radius: 50%; }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
-    <div class="w-full max-w-lg mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4 transition-colors duration-300">
+    <div class="w-full max-w-lg mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 relative">
+        <button id="theme-toggle" class="absolute top-4 right-4 p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
+            <svg id="theme-toggle-dark-icon" class="h-6 w-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+            <svg id="theme-toggle-light-icon" class="h-6 w-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05A1 1 0 016.465 3.636l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM5 11a1 1 0 100-2H4a1 1 0 100 2h1zM8 16a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"></path></svg>
+        </button>
+
         <div class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">Advanced File Converter</h1>
-            <p class="text-gray-500 dark:text-gray-400 mt-2">Convert files online with a powerful backend.</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">Free File Converter</h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">Free and easy file conversion, with no hidden fees.</p>
         </div>
 
         <div id="drop-zone" class="border-3 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-center p-8 md:p-12 cursor-pointer bg-gray-50 dark:bg-gray-700/50">
-            <input type="file" id="file-input" class="hidden">
+            <input type="file" id="file-input" class="hidden" multiple="true">
             <div id="upload-prompt">
                 <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
                 <p class="mt-4 text-lg text-gray-600 dark:text-gray-300"><span class="font-semibold text-blue-600 dark:text-blue-400">Click to upload</span> or drag and drop</p>
-                <p id="file-name" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></p>
+                <p id="file-name" class="mt-2 text-sm text-gray-500 dark:text-gray-400">Supports Images, PDF, DOCX, TXT, HTML & more</p>
             </div>
         </div>
+        
+        <div id="preview-container" class="mt-4 text-center"></div>
 
         <div id="options" class="mt-6 hidden">
             <div class="mb-4">
                 <label for="to-format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Convert To:</label>
                 <select id="to-format" class="block w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"></select>
             </div>
+
+            <div id="compression-options" class="mb-4 hidden">
+                <label for="quality-slider" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Image Quality: <span id="quality-value">90</span>%</label>
+                <input type="range" id="quality-slider" min="10" max="100" value="90" class="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer slider-thumb">
+            </div>
+
             <button id="convert-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition duration-300 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="m11 17 5-5-5-5"/><path d="m18 17 5-5-5-5"/></svg>
                 Convert
@@ -54,12 +71,21 @@
         </div>
 
         <div id="status" class="mt-6 text-center"></div>
+
+        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
+            <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200">About this Project</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                This is a web project by <span class="font-bold">Group Coupal from ACT 2A</span>.
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Our goal is to provide a powerful file conversion tool that is completely free to access, without any subscriptions or payments.
+            </p>
+        </div>
     </div>
     
     <iframe id="render-frame"></iframe>
 
     <script>
-        // --- DOM Element References ---
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const fileNameDisplay = document.getElementById('file-name');
@@ -68,15 +94,24 @@
         const convertBtn = document.getElementById('convert-btn');
         const statusDiv = document.getElementById('status');
         const renderFrame = document.getElementById('render-frame');
-        let selectedFile = null;
+        const previewContainer = document.getElementById('preview-container');
+        const compressionOptions = document.getElementById('compression-options');
+        const qualitySlider = document.getElementById('quality-slider');
+        const qualityValue = document.getElementById('quality-value');
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+        
+        let selectedFiles = [];
 
         const conversionMap = {
             'image': ['png', 'jpeg', 'webp', 'pdf'],
-            'pdf': ['jpeg', 'png', 'docx'],
+            'pdf': ['jpeg', 'png', 'docx', 'merge'],
             'document': ['txt', 'pdf'],
             'text': ['pdf', 'docx'],
             'html': ['png', 'jpeg'],
-            'json': ['csv']
+            'json': ['csv'],
+            'csv': ['json']
         };
         const mimeTypeMap = {
             'image/png': 'image', 'image/jpeg': 'image', 'image/webp': 'image', 'image/gif': 'image',
@@ -84,12 +119,13 @@
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'document',
             'text/plain': 'text',
             'text/html': 'html',
-            'application/json': 'json'
+            'application/json': 'json',
+            'text/csv': 'csv'
         };
 
         // --- Event Listeners ---
         dropZone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileSelect);
+        fileInput.addEventListener('change', (e) => handleFileSelect(e.target.files));
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
             dropZone.addEventListener(e, preventDefaults, false);
             document.body.addEventListener(e, preventDefaults, false);
@@ -98,49 +134,108 @@
         ['dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('drag-over'), false));
         dropZone.addEventListener('drop', handleDrop, false);
         convertBtn.addEventListener('click', handleConversion);
+        qualitySlider.addEventListener('input', (e) => { qualityValue.textContent = e.target.value; });
+        themeToggleBtn.addEventListener('click', toggleTheme);
 
+        // --- Core Functions ---
         function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
-        function handleDrop(e) { if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); }
-        function handleFileSelect(e) { if (e.target.files.length) handleFile(e.target.files[0]); }
+        function handleDrop(e) { handleFileSelect(e.dataTransfer.files); }
 
-        function handleFile(file) {
-            selectedFile = file;
-            fileNameDisplay.textContent = file.name;
-            const fileType = getFileType(file.type);
-
-            if (fileType && conversionMap[fileType]) {
-                populateFormatOptions(conversionMap[fileType]);
-                optionsDiv.classList.remove('hidden');
-                statusDiv.innerHTML = ''; 
-            } else {
-                showError('Unsupported file type.');
-                optionsDiv.classList.add('hidden');
-                selectedFile = null;
-                fileNameDisplay.textContent = 'Please choose a supported file.';
+        function handleFileSelect(files) {
+            if (files.length > 0) {
+                handleFiles(Array.from(files));
             }
         }
         
+        async function handleFiles(files) {
+            selectedFiles = files;
+            const firstFile = files[0];
+            const fileType = getFileType(firstFile.type);
+
+            if (files.length > 1) {
+                const allPdfs = files.every(f => getFileType(f.type) === 'pdf');
+                if (allPdfs) {
+                    fileNameDisplay.textContent = `${files.length} PDF files selected.`;
+                    populateFormatOptions(['merge']);
+                } else {
+                    showError('Multiple files are only supported for PDF merging.');
+                    resetUI();
+                    return;
+                }
+            } else {
+                fileNameDisplay.textContent = firstFile.name;
+                if (!fileType || !conversionMap[fileType]) {
+                    showError('Unsupported file type.');
+                    resetUI();
+                    return;
+                }
+                populateFormatOptions(conversionMap[fileType]);
+            }
+            
+            await generatePreview(firstFile);
+            optionsDiv.classList.remove('hidden');
+            compressionOptions.classList.toggle('hidden', fileType !== 'image');
+            statusDiv.innerHTML = '';
+        }
+
+        function populateFormatOptions(formats) {
+            toFormatSelect.innerHTML = '';
+            formats.forEach(format => {
+                const option = document.createElement('option');
+                option.value = format;
+                option.textContent = format === 'merge' ? 'MERGE PDFs' : format.toUpperCase();
+                toFormatSelect.appendChild(option);
+            });
+        }
+
+        function resetUI() {
+            selectedFiles = [];
+            fileInput.value = '';
+            fileNameDisplay.textContent = 'Supports Images, PDF, DOCX, TXT, HTML & more';
+            optionsDiv.classList.add('hidden');
+            previewContainer.innerHTML = '';
+            statusDiv.innerHTML = '';
+        }
+
         async function handleConversion() {
-            if (!selectedFile) return showError('Please select a file first.');
+            if (selectedFiles.length === 0) return showError('Please select a file first.');
             
             const toFormat = toFormatSelect.value;
-            const fromType = getFileType(selectedFile.type);
+            const fromType = getFileType(selectedFiles[0].type);
             
             showLoading('Converting...');
 
             try {
                 let resultBlob, resultFileName;
                 
-                switch (`${fromType}-to-${toFormat}`) {
-                    case 'image-to-pdf': [resultBlob, resultFileName] = await imageToPdf(selectedFile); break;
-                    case 'image-to-png': case 'image-to-jpeg': case 'image-to-webp': [resultBlob, resultFileName] = await convertImage(selectedFile, toFormat); break;
-                    case 'pdf-to-png': case 'pdf-to-jpeg': await pdfToImages(selectedFile, toFormat); return;
-                    case 'pdf-to-docx': [resultBlob, resultFileName] = await pdfToDocx(selectedFile); break;
-                    case 'document-to-txt': [resultBlob, resultFileName] = await docxToText(selectedFile); break;
-                    case 'text-to-pdf': [resultBlob, resultFileName] = await textToPdf(selectedFile); break;
-                    case 'text-to-docx': [resultBlob, resultFileName] = await textToDocx(selectedFile); break;
-                    case 'html-to-png': case 'html-to-jpeg': [resultBlob, resultFileName] = await htmlToImage(selectedFile, toFormat); break;
-                    case 'json-to-csv': [resultBlob, resultFileName] = await jsonToCsv(selectedFile); break;
+                if (toFormat === 'merge') {
+                    if (selectedFiles.length < 2) {
+                        showError("Please select at least two PDFs to merge.");
+                        return;
+                    }
+                    [resultBlob, resultFileName] = await mergePdfs(selectedFiles);
+                    showDownloadLink(resultBlob, resultFileName);
+                    return;
+                }
+
+                const file = selectedFiles[0];
+                const conversionKey = `${fromType}-to-${toFormat}`;
+                
+                switch (conversionKey) {
+                    case 'image-to-pdf': [resultBlob, resultFileName] = await imageToPdf(file); break;
+                    case 'image-to-png': case 'image-to-jpeg': case 'image-to-webp': 
+                        const quality = parseInt(qualitySlider.value, 10) / 100;
+                        [resultBlob, resultFileName] = await convertImage(file, toFormat, quality); 
+                        break;
+                    case 'pdf-to-png': case 'pdf-to-jpeg': await pdfToImages(file, toFormat); return;
+                    case 'pdf-to-docx': [resultBlob, resultFileName] = await pdfToDocx(file); break;
+                    case 'document-to-txt': [resultBlob, resultFileName] = await docxToText(file); break;
+                    case 'document-to-pdf': [resultBlob, resultFileName] = await textToPdf(await docxToTextAndGetText(file)); break;
+                    case 'text-to-pdf': [resultBlob, resultFileName] = await textToPdf(file); break;
+                    case 'text-to-docx': [resultBlob, resultFileName] = await textToDocx(file); break;
+                    case 'html-to-png': case 'html-to-jpeg': [resultBlob, resultFileName] = await htmlToImage(file, toFormat); break;
+                    case 'json-to-csv': [resultBlob, resultFileName] = await jsonToCsv(file); break;
+                    case 'csv-to-json': [resultBlob, resultFileName] = await csvToJson(file); break;
                     default: showError(`Conversion from ${fromType} to ${toFormat} is not supported.`); return;
                 }
                 
@@ -152,58 +247,56 @@
             }
         }
 
-        // --- UI Update Functions ---
-        function populateFormatOptions(formats) {
-            toFormatSelect.innerHTML = '';
-            formats.forEach(format => {
-                const option = document.createElement('option');
-                option.value = format;
-                option.textContent = format.toUpperCase();
-                toFormatSelect.appendChild(option);
-            });
-        }
+        // --- UI Feedback Functions ---
         function showLoading(message) { statusDiv.innerHTML = `<div class="flex flex-col items-center justify-center p-4 bg-blue-50 dark:bg-gray-700 rounded-lg"><div class="loader"></div><p class="mt-3 text-blue-800 dark:text-blue-300">${message}</p></div>`; }
         function showError(message) { statusDiv.innerHTML = `<div class="p-4 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg"><strong>Error:</strong> ${message}</div>`; }
         function showDownloadLink(blob, fileName, message = 'Conversion successful!') {
             const url = blob ? URL.createObjectURL(blob) : '#';
-            statusDiv.innerHTML = `<div class="p-4 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-lg text-center"><p class="font-semibold">${message}</p>${blob ? `<a href="${url}" download="${fileName}" class="mt-3 inline-block bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition duration-300">Download ${fileName}</a>` : ''}</div>`;
+            const downloadButton = blob ? `<a href="${url}" download="${fileName}" class="mt-3 inline-block bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition duration-300">Download ${fileName}</a>` : '';
+            const resetButton = `<button onclick="resetUI()" class="mt-3 ml-2 inline-block bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition duration-300">Convert Another File</button>`;
+            statusDiv.innerHTML = `<div class="p-4 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-lg text-center"><p class="font-semibold">${message}</p><div>${downloadButton}${resetButton}</div></div>`;
         }
         
         // --- Utility Functions ---
         function getFileType(mimeType) { return mimeTypeMap[mimeType] || null; }
-        function getFileNameWithoutExtension(fileName) { return fileName.substring(0, fileName.lastIndexOf('.')); }
-
-        // --- PDF to DOCX Conversion ---
-        const pdfToDocx = async (file) => {
-            showLoading("Uploading to server for conversion...");
-            const formData = new FormData();
-            formData.append('file', file);
-
-            // !!! IMPORTANT !!!
-            // Replace this URL with your actual Render backend URL in Step 3 of the instructions.
-            const backendUrl = 'https://file-converter-backend-crzi.onrender.com/convert-pdf-to-docx';
-
-            try {
-                const response = await fetch(backendUrl, {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Server error: ${response.statusText}`);
+        function getFileNameWithoutExtension(fileName) { return fileName.substring(0, fileName.lastIndexOf('.')) || fileName; }
+        
+        async function generatePreview(file) {
+            previewContainer.innerHTML = '';
+            const fileType = getFileType(file.type);
+            if (fileType === 'image') {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.onload = () => URL.revokeObjectURL(img.src);
+                previewContainer.appendChild(img);
+            } else if (fileType === 'pdf') {
+                try {
+                    const fileReader = new FileReader();
+                    fileReader.onload = async function() {
+                        const typedarray = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                        const page = await pdf.getPage(1);
+                        const viewport = page.getViewport({ scale: 1.0 });
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        await page.render({ canvasContext: context, viewport: viewport }).promise;
+                        previewContainer.appendChild(canvas);
+                    };
+                    fileReader.readAsArrayBuffer(file);
+                } catch (e) {
+                    console.error("PDF preview error:", e);
+                    previewContainer.innerHTML = `<p class="text-sm text-red-500">Could not generate PDF preview.</p>`;
                 }
-                
-                const blob = await response.blob();
-                return [blob, `${getFileNameWithoutExtension(file.name)}.docx`];
-            } catch (error) {
-                console.error('Network or Server Error:', error);
-                throw new Error(`Could not connect to the conversion server. Details: ${error.message}`);
             }
-        };
+        }
 
-        // --- Other Conversion Functions (Client-Side) ---
-        const convertImage = (file, toFormat) => new Promise((resolve, reject) => {
+        // --- Conversion Logic ---
+        
+        // **FIXED**: The duplicate empty declaration of pdfToDocx that was here has been removed.
+        
+        const convertImage = (file, toFormat, quality = 0.9) => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = e => {
                 const img = new Image();
@@ -216,7 +309,7 @@
                     canvas.toBlob(blob => {
                         if (!blob) return reject(new Error('Canvas to Blob conversion failed'));
                         resolve([blob, `${getFileNameWithoutExtension(file.name)}.${toFormat}`]);
-                    }, `image/${toFormat}`, 0.9);
+                    }, `image/${toFormat}`, quality);
                 };
                 img.onerror = () => reject(new Error('Failed to load image.'));
                 img.src = e.target.result;
@@ -224,6 +317,7 @@
             reader.onerror = () => reject(new Error('Failed to read file.'));
             reader.readAsDataURL(file);
         });
+
         const imageToPdf = async (file) => {
             const { PDFDocument } = PDFLib;
             const pdfDoc = await PDFDocument.create();
@@ -236,6 +330,7 @@
             const pdfBytes = await pdfDoc.save();
             return [new Blob([pdfBytes], { type: 'application/pdf' }), `${getFileNameWithoutExtension(file.name)}.pdf`];
         };
+
         const pdfToImages = (file, toFormat) => new Promise((resolve, reject) => {
             const fileReader = new FileReader();
             fileReader.onload = async function() {
@@ -243,8 +338,8 @@
                     const typedarray = new Uint8Array(this.result);
                     const pdf = await pdfjsLib.getDocument(typedarray).promise;
                     if (pdf.numPages === 0) return reject(new Error("PDF has no pages."));
-                    showLoading(`Converting ${pdf.numPages} page(s)...`);
                     for (let i = 1; i <= pdf.numPages; i++) {
+                        showLoading(`Converting page ${i} of ${pdf.numPages}...`);
                         const page = await pdf.getPage(i);
                         const viewport = page.getViewport({ scale: 2.0 });
                         const canvas = document.createElement('canvas');
@@ -258,17 +353,26 @@
                         link.click();
                         URL.revokeObjectURL(link.href);
                     }
-                    showDownloadLink(null, '', `Finished converting ${pdf.numPages} page(s).`);
+                    showDownloadLink(null, '', `Finished converting ${pdf.numPages} page(s). Your downloads have started.`);
                     resolve();
                 } catch (err) { reject(err); }
             };
             fileReader.readAsArrayBuffer(file);
         });
+
         const docxToText = async (file) => {
             const arrayBuffer = await file.arrayBuffer();
             const { value } = await mammoth.extractRawText({ arrayBuffer });
             return [new Blob([value], { type: 'text/plain' }), `${getFileNameWithoutExtension(file.name)}.txt`];
         };
+
+        const docxToTextAndGetText = async (file) => {
+            const arrayBuffer = await file.arrayBuffer();
+            const { value } = await mammoth.extractRawText({ arrayBuffer });
+            const blob = new Blob([value], { type: 'text/plain' });
+            return new File([blob], `${getFileNameWithoutExtension(file.name)}.txt`, { type: 'text/plain' });
+        };
+
         const textToDocx = async (file) => {
             const { Document, Packer, Paragraph } = docx;
             const text = await file.text();
@@ -276,6 +380,7 @@
             const blob = await Packer.toBlob(doc);
             return [blob, `${getFileNameWithoutExtension(file.name)}.docx`];
         };
+
         const textToPdf = async (file) => {
             const { PDFDocument, rgb, StandardFonts } = PDFLib;
             const text = await file.text();
@@ -287,6 +392,7 @@
             const pdfBytes = await pdfDoc.save();
             return [new Blob([pdfBytes], { type: 'application/pdf' }), `${getFileNameWithoutExtension(file.name)}.pdf`];
         };
+
         const htmlToImage = (file, toFormat) => new Promise(async (resolve, reject) => {
             showLoading("Rendering HTML...");
             const htmlContent = await file.text();
@@ -298,9 +404,10 @@
                         const blob = await new Promise(res => canvas.toBlob(res, `image/${toFormat}`));
                         resolve([blob, `${getFileNameWithoutExtension(file.name)}.${toFormat}`]);
                     } catch(err) { reject(err); }
-                }, 1000); 
+                }, 1000);
             };
         });
+
         const jsonToCsv = async (file) => {
             const text = await file.text();
             const data = JSON.parse(text);
@@ -312,6 +419,93 @@
             });
             return [new Blob([csv], { type: 'text/csv' }), `${getFileNameWithoutExtension(file.name)}.csv`];
         };
+
+        const csvToJson = async (file) => {
+            const text = await file.text();
+            const lines = text.trim().split(/\r?\n/);
+            if (lines.length < 2) throw new Error("CSV must have a header row and at least one data row.");
+            
+            const headers = lines[0].split(',').map(h => h.trim());
+            const jsonArray = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const obj = {};
+                for (let j = 0; j < headers.length; j++) {
+                    obj[headers[j]] = values[j] ? values[j].trim() : "";
+                }
+                jsonArray.push(obj);
+            }
+            
+            const jsonString = JSON.stringify(jsonArray, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            return [blob, `${getFileNameWithoutExtension(file.name)}.json`];
+        };
+
+        const mergePdfs = async (pdfFiles) => {
+            const { PDFDocument } = PDFLib;
+            const mergedPdf = await PDFDocument.create();
+            
+            showLoading(`Merging ${pdfFiles.length} PDFs...`);
+
+            for (let i = 0; i < pdfFiles.length; i++) {
+                const file = pdfFiles[i];
+                showLoading(`Processing ${file.name} (${i + 1}/${pdfFiles.length})...`);
+                const pdfBytes = await file.arrayBuffer();
+                const pdfDoc = await PDFDocument.load(pdfBytes);
+                const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+                copiedPages.forEach(page => mergedPdf.addPage(page));
+            }
+
+            const mergedPdfBytes = await mergedPdf.save();
+            const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+            return [blob, 'merged.pdf'];
+        };
+
+        // --- Theme Management ---
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeToggleDarkIcon.classList.remove('hidden');
+                themeToggleLightIcon.classList.add('hidden');
+            }
+        }
+        function toggleTheme() {
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        }
+
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        applyTheme(savedTheme);
+
+        // This is the single, correct implementation of the backend-dependent function
+        const pdfToDocx = async (file) => {
+            showLoading("This conversion uses a secure server...");
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const backendUrl = 'https://file-converter-backend-crzi.onrender.com/convert-pdf-to-docx';
+
+            try {
+                const response = await fetch(backendUrl, { method: 'POST', body: formData });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: `Server error: ${response.statusText}` }));
+                    throw new Error(errorData.error);
+                }
+                const blob = await response.blob();
+                return [blob, `${getFileNameWithoutExtension(file.name)}.docx`];
+            } catch (error) {
+                console.error('Network or Server Error:', error);
+                throw new Error(`Could not connect to the conversion server. Please try again later.`);
+            }
+        };
+
     </script>
 </body>
 </html>
