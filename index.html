@@ -3,22 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Client-Side File Converter</title>
+    <title>Advanced File Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-    
     <script>
-      // Required setup for pdf.js to specify where its worker file is located.
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
     </script>
-    
     <style>
          body { font-family: 'Inter', sans-serif; }
          #drop-zone { transition: background-color 0.3s, border-color 0.3s; }
@@ -28,7 +23,6 @@
              width: 40px; height: 40px; animation: spin 1s linear infinite;
          }
          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-         /* Style for the temporary HTML rendering frame */
          #render-frame { position: absolute; left: -9999px; top: -9999px; width: 1024px; border: none; }
     </style>
 </head>
@@ -36,7 +30,7 @@
     <div class="w-full max-w-lg mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
         <div class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">Advanced File Converter</h1>
-            <p class="text-gray-500 dark:text-gray-400 mt-2">Convert files securely in your browser & with a backend.</p>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">Convert files online with a powerful backend.</p>
         </div>
 
         <div id="drop-zone" class="border-3 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-center p-8 md:p-12 cursor-pointer bg-gray-50 dark:bg-gray-700/50">
@@ -52,9 +46,6 @@
             <div class="mb-4">
                 <label for="to-format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Convert To:</label>
                 <select id="to-format" class="block w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"></select>
-            </div>
-            <div id="docx-warning" class="hidden p-3 mb-4 text-xs text-yellow-800 bg-yellow-100 rounded-lg dark:bg-yellow-900/40 dark:text-yellow-300">
-                <strong>Note:</strong> This conversion uses a high-quality backend server. Ensure you are running it locally for it to work.
             </div>
             <button id="convert-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition duration-300 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="m11 17 5-5-5-5"/><path d="m18 17 5-5-5-5"/></svg>
@@ -74,15 +65,11 @@
         const fileNameDisplay = document.getElementById('file-name');
         const optionsDiv = document.getElementById('options');
         const toFormatSelect = document.getElementById('to-format');
-        const docxWarning = document.getElementById('docx-warning');
         const convertBtn = document.getElementById('convert-btn');
         const statusDiv = document.getElementById('status');
         const renderFrame = document.getElementById('render-frame');
-
-        // --- Global State ---
         let selectedFile = null;
 
-        // --- Conversion & MIME Type Maps ---
         const conversionMap = {
             'image': ['png', 'jpeg', 'webp', 'pdf'],
             'pdf': ['jpeg', 'png', 'docx'],
@@ -111,11 +98,7 @@
         ['dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('drag-over'), false));
         dropZone.addEventListener('drop', handleDrop, false);
         convertBtn.addEventListener('click', handleConversion);
-        toFormatSelect.addEventListener('change', (e) => {
-            docxWarning.classList.toggle('hidden', e.target.value !== 'docx' || getFileType(selectedFile.type) !== 'pdf');
-        });
 
-        // --- Event Handlers ---
         function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
         function handleDrop(e) { if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); }
         function handleFileSelect(e) { if (e.target.files.length) handleFile(e.target.files[0]); }
@@ -129,8 +112,6 @@
                 populateFormatOptions(conversionMap[fileType]);
                 optionsDiv.classList.remove('hidden');
                 statusDiv.innerHTML = ''; 
-                docxWarning.classList.add('hidden'); // Reset warning
-                toFormatSelect.dispatchEvent(new Event('change')); // Trigger change to show warning if needed
             } else {
                 showError('Unsupported file type.');
                 optionsDiv.classList.add('hidden');
@@ -150,23 +131,16 @@
             try {
                 let resultBlob, resultFileName;
                 
-                // --- Conversion Logic Routing ---
                 switch (`${fromType}-to-${toFormat}`) {
                     case 'image-to-pdf': [resultBlob, resultFileName] = await imageToPdf(selectedFile); break;
                     case 'image-to-png': case 'image-to-jpeg': case 'image-to-webp': [resultBlob, resultFileName] = await convertImage(selectedFile, toFormat); break;
-                    
-                    case 'pdf-to-png': case 'pdf-to-jpeg': await pdfToImages(selectedFile, toFormat); return; // This func handles its own UI
+                    case 'pdf-to-png': case 'pdf-to-jpeg': await pdfToImages(selectedFile, toFormat); return;
                     case 'pdf-to-docx': [resultBlob, resultFileName] = await pdfToDocx(selectedFile); break;
-
                     case 'document-to-txt': [resultBlob, resultFileName] = await docxToText(selectedFile); break;
-                    
                     case 'text-to-pdf': [resultBlob, resultFileName] = await textToPdf(selectedFile); break;
                     case 'text-to-docx': [resultBlob, resultFileName] = await textToDocx(selectedFile); break;
-
                     case 'html-to-png': case 'html-to-jpeg': [resultBlob, resultFileName] = await htmlToImage(selectedFile, toFormat); break;
-
                     case 'json-to-csv': [resultBlob, resultFileName] = await jsonToCsv(selectedFile); break;
-
                     default: showError(`Conversion from ${fromType} to ${toFormat} is not supported.`); return;
                 }
                 
@@ -187,7 +161,6 @@
                 option.textContent = format.toUpperCase();
                 toFormatSelect.appendChild(option);
             });
-            toFormatSelect.dispatchEvent(new Event('change'));
         }
         function showLoading(message) { statusDiv.innerHTML = `<div class="flex flex-col items-center justify-center p-4 bg-blue-50 dark:bg-gray-700 rounded-lg"><div class="loader"></div><p class="mt-3 text-blue-800 dark:text-blue-300">${message}</p></div>`; }
         function showError(message) { statusDiv.innerHTML = `<div class="p-4 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg"><strong>Error:</strong> ${message}</div>`; }
@@ -200,8 +173,36 @@
         function getFileType(mimeType) { return mimeTypeMap[mimeType] || null; }
         function getFileNameWithoutExtension(fileName) { return fileName.substring(0, fileName.lastIndexOf('.')); }
 
-        // --- Core Conversion Functions ---
-        // IMAGE CONVERSIONS
+        // --- PDF to DOCX Conversion ---
+        const pdfToDocx = async (file) => {
+            showLoading("Uploading to server for conversion...");
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // !!! IMPORTANT !!!
+            // Replace this URL with your actual Render backend URL in Step 3 of the instructions.
+            const backendUrl = 'https://your-backend-service-name.onrender.com/convert-pdf-to-docx';
+
+            try {
+                const response = await fetch(backendUrl, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Server error: ${response.statusText}`);
+                }
+                
+                const blob = await response.blob();
+                return [blob, `${getFileNameWithoutExtension(file.name)}.docx`];
+            } catch (error) {
+                console.error('Network or Server Error:', error);
+                throw new Error(`Could not connect to the conversion server. Details: ${error.message}`);
+            }
+        };
+
+        // --- Other Conversion Functions (Client-Side) ---
         const convertImage = (file, toFormat) => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = e => {
@@ -235,15 +236,13 @@
             const pdfBytes = await pdfDoc.save();
             return [new Blob([pdfBytes], { type: 'application/pdf' }), `${getFileNameWithoutExtension(file.name)}.pdf`];
         };
-
-        // PDF CONVERSIONS
         const pdfToImages = (file, toFormat) => new Promise((resolve, reject) => {
             const fileReader = new FileReader();
             fileReader.onload = async function() {
                 try {
                     const typedarray = new Uint8Array(this.result);
                     const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    if (pdf.numPages === 0) return reject(new Error("The selected PDF has no pages."));
+                    if (pdf.numPages === 0) return reject(new Error("PDF has no pages."));
                     showLoading(`Converting ${pdf.numPages} page(s)...`);
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
@@ -265,40 +264,6 @@
             };
             fileReader.readAsArrayBuffer(file);
         });
-
-        const pdfToDocx = async (file) => {
-            // This function sends the file to a Python backend for high-quality conversion.
-            // Make sure the Python server (app.py) is running for this to work.
-            showLoading("Uploading and converting on server...");
-            
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                // Call the local Python Flask server, which runs on port 5000 by default.
-                const response = await fetch('http://127.0.0.1:5000/convert-pdf-to-docx', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    // Try to get a specific error message from the server response
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Server error: ${response.statusText}`);
-                }
-                
-                // The server responds with the converted file blob
-                const blob = await response.blob();
-                return [blob, `${getFileNameWithoutExtension(file.name)}.docx`];
-
-            } catch (error) {
-                console.error('Network or Server Error:', error);
-                // Re-throw the error to be caught by the main handler, providing a helpful message.
-                throw new Error(`Could not connect to the conversion server. Is it running? Details: ${error.message}`);
-            }
-        };
-
-        // DOCX/TEXT CONVERSIONS
         const docxToText = async (file) => {
             const arrayBuffer = await file.arrayBuffer();
             const { value } = await mammoth.extractRawText({ arrayBuffer });
@@ -322,14 +287,12 @@
             const pdfBytes = await pdfDoc.save();
             return [new Blob([pdfBytes], { type: 'application/pdf' }), `${getFileNameWithoutExtension(file.name)}.pdf`];
         };
-
-        // HTML & JSON CONVERSIONS
         const htmlToImage = (file, toFormat) => new Promise(async (resolve, reject) => {
             showLoading("Rendering HTML...");
             const htmlContent = await file.text();
             renderFrame.srcdoc = htmlContent;
             renderFrame.onload = () => {
-                setTimeout(async () => { // Timeout to ensure all resources (images, css) are loaded
+                setTimeout(async () => {
                     try {
                         const canvas = await html2canvas(renderFrame.contentWindow.document.body, { useCORS: true });
                         const blob = await new Promise(res => canvas.toBlob(res, `image/${toFormat}`));
@@ -342,7 +305,6 @@
             const text = await file.text();
             const data = JSON.parse(text);
             if (!Array.isArray(data) || data.length === 0) throw new Error("JSON must be a non-empty array of objects.");
-            
             const headers = Object.keys(data[0]);
             let csv = headers.join(',') + '\n';
             data.forEach(row => {
